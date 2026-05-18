@@ -128,13 +128,13 @@ pipeline {
                             2>/dev/null || true
                 """
             }
-            post {
+ post {
                 failure {
                     echo "BUILD FAILED — see compiler errors above"
                 }
             }
         }
-
+ 
         // ------------------------------------------------------------------
         stage("Plant Model Self-Test") {
         // ------------------------------------------------------------------
@@ -143,7 +143,7 @@ pipeline {
                 sh "${PYTHON} plant/plant_model.py"
             }
         }
-
+ 
         // ------------------------------------------------------------------
         stage("SIL Tests") {
         // ------------------------------------------------------------------
@@ -164,7 +164,7 @@ pipeline {
                 failure { echo "SIL TESTS FAILED — see report above" }
             }
         }
-
+ 
         // ------------------------------------------------------------------
         stage("Archive Artifacts") {
         // ------------------------------------------------------------------
@@ -178,36 +178,40 @@ pipeline {
                                  allowEmptyArchive: true
             }
         }
-
+ 
+        // ------------------------------------------------------------------
+        stage("Cleanup") {
+        // ------------------------------------------------------------------
+            steps {
+                echo "━━━ Cleanup : removing build dir ━━━━━━━━━━━━━━━━━━━"
+                sh "rm -rf ${BUILD_DIR} || true"
+            }
+        }
+ 
     } // end stages
-
+ 
     // ======================================================================
     // POST  —  runs after all stages, no matter what happened
     // ======================================================================
     post {
-
+ 
         // ── GitHub commit status ───────────────────────────────────────────
         success {
             echo "✓  Pipeline PASSED"
         }
-
+ 
         failure {
             echo "✗  Pipeline FAILED"
         }
-
+ 
         unstable {
             echo "⚠  Pipeline UNSTABLE — some tests skipped or flaky"
         }
-
-        // ── Cleanup + Email (merged into one always block) ─────────────────
+ 
+        // ── Email notification (always — pass AND fail) ────────────────────
         always {
-            // 1. Workspace cleanup
-            echo "━━━ Post : Cleanup ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            sh "rm -rf build || true"
-
-            // 2. Email notification (pass AND fail)
             script {
-
+ 
                 // ── Derive display values ──────────────────────────────────
                 def result      = currentBuild.result ?: "SUCCESS"
                 def isPR        = (env.CHANGE_ID != null)
@@ -216,7 +220,7 @@ pipeline {
                     : env.BRANCH_NAME
                 def authorEmail = env.CHANGE_AUTHOR_EMAIL ?: ""
                 def durationSec = (currentBuild.duration / 1000).toInteger()
-
+ 
                 // ── Color / icon per result ────────────────────────────────
                 def color, icon, banner
                 switch (result) {
@@ -227,20 +231,20 @@ pipeline {
                     default:
                         color = "#cb2431"; icon = "❌"; banner = "Build / tests failed"; break
                 }
-
+ 
                 // ── Recipient list ─────────────────────────────────────────
                 // Always sends to the team DL.
                 // On a PR build, also CC the PR author if their email is known.
                 def recipients = env.TEAM_EMAIL
                 if (authorEmail) { recipients = "${authorEmail}, ${recipients}" }
-
+ 
                 // ── Send email ─────────────────────────────────────────────
                 emailext(
                     subject: "${icon} [SIL ${result}] ${prLine} — Build #${env.BUILD_NUMBER}",
                     to: recipients,
                     replyTo: "jenkins-noreply@yourcompany.com",
                     mimeType: "text/html",
-
+ 
                     body: """
 <!DOCTYPE html>
 <html>
@@ -249,7 +253,7 @@ pipeline {
   <tr><td align="center">
   <table width="600" cellpadding="0" cellspacing="0"
          style="background:#ffffff;border:1px solid #e1e4e8;border-radius:8px;overflow:hidden;">
-
+ 
     <!-- Header banner -->
     <tr>
       <td style="background:${color};padding:20px 28px;">
@@ -258,7 +262,7 @@ pipeline {
         </span>
       </td>
     </tr>
-
+ 
     <!-- Build summary table -->
     <tr>
       <td style="padding:24px 28px 12px;">
@@ -299,7 +303,7 @@ pipeline {
         </table>
       </td>
     </tr>
-
+ 
     <!-- Quick links -->
     <tr>
       <td style="padding:12px 28px 28px;">
@@ -323,7 +327,7 @@ pipeline {
         </a>
       </td>
     </tr>
-
+ 
     <!-- Footer -->
     <tr>
       <td style="background:#f6f8fa;padding:14px 28px;border-top:1px solid #e1e4e8;
@@ -331,7 +335,7 @@ pipeline {
         Sent by Jenkins CI — Motor Speed Controller SIL Pipeline
       </td>
     </tr>
-
+ 
   </table>
   </td></tr>
 </table>
@@ -339,9 +343,9 @@ pipeline {
 </html>
                     """
                 ) // end emailext
-
+ 
             } // end script
         } // end always (email)
-
+ 
     } // end post
 }
