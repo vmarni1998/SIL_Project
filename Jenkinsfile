@@ -44,7 +44,7 @@ pipeline {
         //   Kind : Secret text
         //   ID   : SIL_TEAM_EMAIL
         //   Value: your-team-dl@yourcompany.com
-        TEAM_EMAIL = credentials("SIL_TEAM_EMAIL")
+        TEAM_EMAIL = credentials("vmarni@mtu.edu")
     }
 
     // ── Pipeline-wide options ──────────────────────────────────────────────
