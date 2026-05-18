@@ -1,5 +1,3 @@
-Copy
-
 // =============================================================================
 // Jenkinsfile  —  SIL Pipeline for Motor Speed Controller
 // =============================================================================
@@ -24,13 +22,13 @@ Copy
 // Agent requirements:
 //   cmake >= 3.16 | gcc (C11) | python3 >= 3.8 | git
 // =============================================================================
- 
+
 pipeline {
- 
+
     // ── Agent ──────────────────────────────────────────────────────────────
     // Replace 'any' with a label (e.g. 'linux-sil') if you have dedicated nodes
     agent any
- 
+
     // ── Global environment variables ───────────────────────────────────────
     environment {
         BUILD_DIR        = "build"
@@ -38,7 +36,7 @@ pipeline {
         REPORT_DIR       = "tests"
         PYTHON           = "python3"          // use 'python' on Windows agents
         CMAKE_BUILD_TYPE = "Debug"            // Debug keeps -Wall / -Werror
- 
+
         // ── Email recipients ───────────────────────────────────────────────
         // TEAM_EMAIL is loaded from a Jenkins credential (plain text secret).
         // This keeps real addresses out of the repo.
@@ -46,9 +44,9 @@ pipeline {
         //   Kind : Secret text
         //   ID   : SIL_TEAM_EMAIL
         //   Value: your-team-dl@yourcompany.com
-        TEAM_EMAIL = credentials("vmarni@mtu.edu")
+        TEAM_EMAIL = credentials("SIL_TEAM_EMAIL")
     }
- 
+
     // ── Pipeline-wide options ──────────────────────────────────────────────
     options {
         timeout(time: 30, unit: "MINUTES")           // abort if hung
@@ -57,19 +55,19 @@ pipeline {
         disableConcurrentBuilds()                     // one build per branch
         timestamps()                                  // timestamps in log
     }
- 
+
     // ── Triggers ───────────────────────────────────────────────────────────
     // PR triggers come from the GitHub Branch Source plugin (configured in
     // the Multibranch job, not here).  pollSCM is a fallback safety net.
     triggers {
         pollSCM("H/5 * * * *")
     }
- 
+
     // ======================================================================
     // STAGES
     // ======================================================================
     stages {
- 
+
         // ------------------------------------------------------------------
         stage("Checkout") {
         // ------------------------------------------------------------------
@@ -78,7 +76,7 @@ pipeline {
                 // For a PR, Jenkins checks out the merge commit of
                 // PR-head into the target branch automatically.
                 checkout scm
- 
+
                 echo "Branch    : ${env.BRANCH_NAME ?: env.GIT_BRANCH}"
                 echo "Commit    : ${env.GIT_COMMIT}"
                 echo "PR        : ${env.CHANGE_ID   ?: '(not a PR build)'}"
@@ -87,7 +85,7 @@ pipeline {
                 echo "Workspace : ${env.WORKSPACE}"
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("Verify Tools") {
         // ------------------------------------------------------------------
@@ -101,7 +99,7 @@ pipeline {
                 """
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("CMake Configure") {
         // ------------------------------------------------------------------
@@ -115,7 +113,7 @@ pipeline {
                 """
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("Build Shared Library") {
         // ------------------------------------------------------------------
@@ -136,7 +134,7 @@ pipeline {
                 }
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("Plant Model Self-Test") {
         // ------------------------------------------------------------------
@@ -145,7 +143,7 @@ pipeline {
                 sh "${PYTHON} plant/plant_model.py"
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("SIL Tests") {
         // ------------------------------------------------------------------
@@ -166,7 +164,7 @@ pipeline {
                 failure { echo "SIL TESTS FAILED — see report above" }
             }
         }
- 
+
         // ------------------------------------------------------------------
         stage("Archive Artifacts") {
         // ------------------------------------------------------------------
@@ -180,67 +178,36 @@ pipeline {
                                  allowEmptyArchive: true
             }
         }
- 
+
     } // end stages
- 
+
     // ======================================================================
     // POST  —  runs after all stages, no matter what happened
     // ======================================================================
     post {
- 
-        // ── 1. Workspace cleanup ───────────────────────────────────────────
-        always {
-            echo "━━━ Post : Cleanup ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            sh "rm -rf ${BUILD_DIR} || true"
-        }
- 
-        // ── 2. GitHub commit status ────────────────────────────────────────
-        // Requires: GitHub plugin + a credential with repo:status scope.
-        // The Multibranch / GitHub Branch Source plugin usually does this
-        // automatically, but the explicit calls below give you full control.
+
+        // ── GitHub commit status ───────────────────────────────────────────
         success {
             echo "✓  Pipeline PASSED"
-            // Uncomment after adding the 'github-token' credential:
-            // githubNotify status: 'SUCCESS',
-            //              description: 'SIL tests passed',
-            //              context: 'ci/sil',
-            //              credentialsId: 'github-token'
         }
- 
+
         failure {
             echo "✗  Pipeline FAILED"
-            // githubNotify status: 'FAILURE',
-            //              description: 'SIL tests failed',
-            //              context: 'ci/sil',
-            //              credentialsId: 'github-token'
         }
- 
+
         unstable {
             echo "⚠  Pipeline UNSTABLE — some tests skipped or flaky"
         }
- 
-        // ── 3. Email notification (always — pass AND fail) ─────────────────
-        //
-        // Uses the Email Extension plugin (email-ext).
-        // Install: Manage Jenkins → Plugins → "Email Extension Plugin"
-        //
-        // SMTP is configured globally under:
-        //   Manage Jenkins → System → Extended E-mail Notification
-        //
-        // Variables that work inside Multibranch / GitHub Branch Source:
-        //   env.CHANGE_ID            PR number  (e.g. "42")
-        //   env.CHANGE_TITLE         PR title   (e.g. "Fix PID windup")
-        //   env.CHANGE_AUTHOR        GitHub username of PR opener
-        //   env.CHANGE_AUTHOR_EMAIL  Email of PR opener  ← used as "to"
-        //   env.BRANCH_NAME          e.g. "PR-42"
-        //   env.BUILD_URL            Full URL to this build
-        //   env.BUILD_NUMBER         e.g. "17"
-        //   currentBuild.result      "SUCCESS" | "FAILURE" | "UNSTABLE"
-        //   currentBuild.duration    ms elapsed (divide by 1000 for seconds)
-        // ------------------------------------------------------------------
+
+        // ── Cleanup + Email (merged into one always block) ─────────────────
         always {
+            // 1. Workspace cleanup
+            echo "━━━ Post : Cleanup ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            sh "rm -rf ${BUILD_DIR} || true"
+
+            // 2. Email notification (pass AND fail)
             script {
- 
+
                 // ── Derive display values ──────────────────────────────────
                 def result      = currentBuild.result ?: "SUCCESS"
                 def isPR        = (env.CHANGE_ID != null)
@@ -249,7 +216,7 @@ pipeline {
                     : env.BRANCH_NAME
                 def authorEmail = env.CHANGE_AUTHOR_EMAIL ?: ""
                 def durationSec = (currentBuild.duration / 1000).toInteger()
- 
+
                 // ── Color / icon per result ────────────────────────────────
                 def color, icon, banner
                 switch (result) {
@@ -260,20 +227,20 @@ pipeline {
                     default:
                         color = "#cb2431"; icon = "❌"; banner = "Build / tests failed"; break
                 }
- 
+
                 // ── Recipient list ─────────────────────────────────────────
                 // Always sends to the team DL.
                 // On a PR build, also CC the PR author if their email is known.
                 def recipients = env.TEAM_EMAIL
                 if (authorEmail) { recipients = "${authorEmail}, ${recipients}" }
- 
+
                 // ── Send email ─────────────────────────────────────────────
                 emailext(
                     subject: "${icon} [SIL ${result}] ${prLine} — Build #${env.BUILD_NUMBER}",
                     to: recipients,
                     replyTo: "jenkins-noreply@yourcompany.com",
                     mimeType: "text/html",
- 
+
                     body: """
 <!DOCTYPE html>
 <html>
@@ -282,7 +249,7 @@ pipeline {
   <tr><td align="center">
   <table width="600" cellpadding="0" cellspacing="0"
          style="background:#ffffff;border:1px solid #e1e4e8;border-radius:8px;overflow:hidden;">
- 
+
     <!-- Header banner -->
     <tr>
       <td style="background:${color};padding:20px 28px;">
@@ -291,7 +258,7 @@ pipeline {
         </span>
       </td>
     </tr>
- 
+
     <!-- Build summary table -->
     <tr>
       <td style="padding:24px 28px 12px;">
@@ -332,7 +299,7 @@ pipeline {
         </table>
       </td>
     </tr>
- 
+
     <!-- Quick links -->
     <tr>
       <td style="padding:12px 28px 28px;">
@@ -356,7 +323,7 @@ pipeline {
         </a>
       </td>
     </tr>
- 
+
     <!-- Footer -->
     <tr>
       <td style="background:#f6f8fa;padding:14px 28px;border-top:1px solid #e1e4e8;
@@ -364,7 +331,7 @@ pipeline {
         Sent by Jenkins CI — Motor Speed Controller SIL Pipeline
       </td>
     </tr>
- 
+
   </table>
   </td></tr>
 </table>
@@ -372,9 +339,9 @@ pipeline {
 </html>
                     """
                 ) // end emailext
- 
+
             } // end script
         } // end always (email)
- 
+
     } // end post
 }
