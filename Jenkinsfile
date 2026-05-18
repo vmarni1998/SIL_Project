@@ -203,7 +203,7 @@ pipeline {
         always {
             // 1. Workspace cleanup
             echo "━━━ Post : Cleanup ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            sh "rm -rf ${BUILD_DIR} || true"
+            sh "rm -rf build || true"
 
             // 2. Email notification (pass AND fail)
             script {
