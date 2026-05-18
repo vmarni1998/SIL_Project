@@ -11,7 +11,7 @@ pipeline {
         REPORT_DIR       = "tests"
         PYTHON           = "python3"
         CMAKE_BUILD_TYPE = "Debug"
-        TEAM_EMAIL       = credentials("vmarni@mtu.edu")
+        TEAM_EMAIL       = "vmarni@mtu.edu"
     }
 
     options {
