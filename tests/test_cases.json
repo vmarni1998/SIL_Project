@@ -1,0 +1,90 @@
+{
+  "_comment": "SIL Test Suite — Motor Speed Controller v1.0",
+  "_comment2": "Each test case ID maps to a system requirement (REQ-CTRL-xxx)",
+
+  "test_suite": "Motor Speed Controller — SIL v1.0",
+
+  "dt": 0.01,
+
+  "pid_gains": {
+    "kp": 3.0,
+    "ki": 2.5,
+    "kd": 0.05
+  },
+
+  "plant": {
+    "max_speed": 100.0,
+    "time_constant": 0.5,
+    "friction": 0.02,
+    "noise_std": 0.0
+  },
+
+  "test_cases": [
+    {
+      "id": "TC_001",
+      "requirement": "REQ-CTRL-001",
+      "description": "Step from 0 to 50% speed — mid-range setpoint tracking",
+      "setpoint": 50.0,
+      "initial_speed": 0.0,
+      "duration_s": 4.0,
+      "tolerance": 2.0,
+      "check_overshoot": true,
+      "max_overshoot_pct": 15.0
+    },
+    {
+      "id": "TC_002",
+      "requirement": "REQ-CTRL-002",
+      "description": "Full speed command — maximum setpoint reach",
+      "setpoint": 100.0,
+      "initial_speed": 0.0,
+      "duration_s": 5.0,
+      "tolerance": 3.0,
+      "check_overshoot": false,
+      "max_overshoot_pct": 0.0
+    },
+    {
+      "id": "TC_003",
+      "requirement": "REQ-CTRL-003",
+      "description": "Low-speed precision hold — minimum setpoint stability",
+      "setpoint": 10.0,
+      "initial_speed": 0.0,
+      "duration_s": 6.0,
+      "tolerance": 1.0,
+      "check_overshoot": true,
+      "max_overshoot_pct": 25.0
+    },
+    {
+      "id": "TC_004",
+      "requirement": "REQ-CTRL-004",
+      "description": "Zero setpoint — motor must come to a full stop",
+      "setpoint": 0.0,
+      "initial_speed": 0.0,
+      "duration_s": 2.0,
+      "tolerance": 0.5,
+      "check_overshoot": false,
+      "max_overshoot_pct": 0.0
+    },
+    {
+      "id": "TC_005",
+      "requirement": "REQ-CTRL-005",
+      "description": "Speed step-down — reduce from 80% to 30%",
+      "setpoint": 30.0,
+      "initial_speed": 80.0,
+      "duration_s": 5.0,
+      "tolerance": 2.5,
+      "check_overshoot": false,
+      "max_overshoot_pct": 0.0
+    },
+    {
+      "id": "TC_006",
+      "requirement": "REQ-CTRL-006",
+      "description": "75% speed hold — upper-mid range steady state",
+      "setpoint": 75.0,
+      "initial_speed": 0.0,
+      "duration_s": 5.0,
+      "tolerance": 2.5,
+      "check_overshoot": true,
+      "max_overshoot_pct": 12.0
+    }
+  ]
+}
